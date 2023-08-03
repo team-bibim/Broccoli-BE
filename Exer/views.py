@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from Exer.models import Exercise
+from usebody.models import Usebody
 from Exer.serializers import ExerciseSerializer
 from Exer.serializers import ExerciseDetailSerializer
 from django.shortcuts import get_object_or_404
@@ -15,7 +16,7 @@ class ExerciseBodyAPIiew(APIView):
 
     def get(self,request,pk):
         exercise = self.get_object(pk)
-        serializer = ExerciseSerializer(exercise)
+        serializer = ExerciseSerializer(exercise, many=True)
         return Response(serializer.data)
 
 

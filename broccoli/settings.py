@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'Exer.apps.ExerConfig',
+    'usebody.apps.UsebodyConfig',
+    'accounts.apps.AccountsConfig',
 ]
 
 MIDDLEWARE = [
