@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 import my_settings
@@ -33,6 +33,9 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+#user 설정
+AUTH_USER_MODEL = 'accounts.User'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,7 +43,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    #라이브러리
     'rest_framework',
+    'rest_framework_simplejwt',
+    # 'dj_rest_auth',
+    # 'dj_rest_auth.registration',
+
+
+    # 'allauth',
+    # 'allauth.socialaccount',
+    # 'allauth.account',
+    'rest_framework.authtoken',
+    # 'rest_auth.registration',
+
+    #앱
     'usebody.apps.UsebodyConfig',
     'accounts.apps.AccountsConfig',
 ]
@@ -54,6 +71,32 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# SITE_ID = 1
+# REST_USE_JWT = True
+
+#이메일 인증 안함
+# ACCOUNT_EMAIL_VERIFICATION = "none"
+# ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+# ACCOUNT_EMAIL_REQUIRED = True
+# ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+#JWT 설정
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('JWT',),
+}
 
 ROOT_URLCONF = 'broccoli.urls'
 
