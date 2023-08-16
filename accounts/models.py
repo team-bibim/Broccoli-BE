@@ -43,6 +43,7 @@ class UserManager(BaseUserManager):
             nickname=nickname
         )
         user.set_password(password)
+        #print(user.password)
         user.save(using=self._db)
         return user
 
@@ -61,8 +62,8 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
-    email = models.EmailField(max_length=100, blank=True, null=False, unique=True)
-    nickname = models.CharField(max_length=20, blank=True, null=False, unique=True)
+    email = models.EmailField(max_length=100, blank=False, null=False, unique=True)
+    nickname = models.CharField(max_length=20, blank=False, null=False, unique=True)
 
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -70,8 +71,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    USERNAME_FIELD = 'nickname'
-    REQUIRED_FIELDS = ['email']
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['nickname']
 
 # class Userinfo(models.Model):
 #     user = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)

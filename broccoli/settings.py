@@ -35,6 +35,16 @@ ALLOWED_HOSTS = []
 
 #user 설정
 AUTH_USER_MODEL = 'accounts.User'
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -47,8 +57,6 @@ INSTALLED_APPS = [
     #라이브러리
     'rest_framework',
     'rest_framework_simplejwt',
-    # 'dj_rest_auth',
-    # 'dj_rest_auth.registration',
 
 
     # 'allauth',
@@ -71,17 +79,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-# SITE_ID = 1
-# REST_USE_JWT = True
-
-#이메일 인증 안함
-# ACCOUNT_EMAIL_VERIFICATION = "none"
-# ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-# ACCOUNT_EMAIL_REQUIRED = True
-# ACCOUNT_USERNAME_REQUIRED = False
-# ACCOUNT_AUTHENTICATION_METHOD = 'email'
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
