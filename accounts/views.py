@@ -4,22 +4,21 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
 from accounts.models import User
 from accounts.serializers import UserSerializer
 from my_settings import SECRET_KEY
 
 
-#01-01 이메일 회원가입
-#로그인 시 이메일인지 닉네임인지 확인 필요
+# 01-01 이메일 회원가입
 class SigninAPIView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
-            #JWT 토큰
+            # JWT 토큰
             token = TokenObtainPairSerializer.get_token(user)
             refresh_token = str(token)
             access_token = str(token.access_token)
@@ -41,8 +40,38 @@ class SigninAPIView(APIView):
             return res
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class AuthAPIView(APIView):
-    #01-02 이메일 로그인
+    # 01 token에 따른 user 정보 가져오기
+    def get(self, request):
+        try:
+            access = request.COOKIES.get('access')
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            serializer = UserSerializer(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        # token이 만료되었을 때
+        except(jwt.ExpiredSignatureError):
+            data = {'refresh': request.COOKIES('refresh', None)}
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                access = serializer.data.get('access', None)
+                refresh = serializer.data.get('refresh', None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                serializer = UserSerializer(instance=user)
+                res = Response(serializer.data, status=status.HTTP_200_OK)
+                res.set_cookie('access', access)
+                res.set_cookie('refresh', refresh)
+                return res
+            raise jwt.exceptions.InvalidTokenError
+        # 사용 불가능한 토큰일 때
+        except(jwt.exceptions.InvalidTokenError):
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    # 01-02 이메일 로그인
     def post(self, request):
         # user 인증
         print(request.data)
@@ -76,3 +105,11 @@ class AuthAPIView(APIView):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+    # 01-03 이메일 로그아웃
+    def delete(self, request):
+        response = Response({
+            "message": "Logout Success"
+        }, status=status.HTTP_200_OK)
+        response.delete_cookie("access")
+        response.delete_cookie("refresh")
+        return response
