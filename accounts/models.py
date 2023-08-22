@@ -17,20 +17,6 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 #         db_table = 'user'
 #         db_table_comment = '사용자 데이터'
 
-# class User(AbstractBaseUser):
-#     user_id = models.AutoField(primary_key=True)
-#     nickname = models.CharField(max_length=10, blank=True, null=True)
-#     password = models.CharField(max_length=20, blank=True, null=True)
-#     email = models.CharField(max_length=100, blank=True, null=True, unique=True)
-#
-#     USERNAME_FIELD = 'email'
-#     REQUIRED_FIELDS = ['username']
-#
-#     class Meta:
-#         managed = False
-#         db_table = 'user'
-#         db_table_comment = '사용자 데이터'
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email, nickname, password, **kwargs):
@@ -39,11 +25,9 @@ class UserManager(BaseUserManager):
 
         user = self.model(
             email=self.normalize_email(email),
-            # email=email,
             nickname=nickname
         )
         user.set_password(password)
-        #print(user.password)
         user.save(using=self._db)
         return user
 
