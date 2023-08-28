@@ -1,13 +1,17 @@
 import jwt
 from django.contrib.auth import authenticate
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
-from accounts.models import User
-from accounts.serializers import UserSerializer
+from accounts.models import User, Follow
+from accounts.serializers import UserSerializer, FollowSerializer
+from accounts.utils import login_check
 from my_settings import SECRET_KEY
 
 
@@ -113,3 +117,47 @@ class AuthAPIView(APIView):
         response.delete_cookie("access")
         response.delete_cookie("refresh")
         return response
+
+
+class FollowAPIView(APIView):
+    # API 08-01 팔로잉 조회
+    @login_check
+    def get(self, request):
+        user_id = request.user.id
+        following = Follow.objects.filter(follower_id=user_id)
+        serializer = FollowSerializer(following, many=True)
+        return Response(serializer.data)
+
+    # API 08-02, 08-03 팔로우, 언팔로우
+    @login_check
+    def post(self, request):
+        print(request.user)
+        following_id = request.data.get('following_id')
+        print(following_id)
+        user_following = get_object_or_404(User, id=following_id)
+
+        print(user_following)
+
+        if user_following == request.user:
+            return Response({'message': "Can't Follow Self"}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_following = Follow.objects.filter(follower=request.user, following=user_following).exists()
+
+        if is_following:
+            # 팔로잉 중인 상태: unfollow
+            follow = Follow.objects.get(follower=request.user, following=user_following)
+            follow.delete()
+            message = 'Unfollowed Successfully'
+        else:
+            # 팔로잉 되어 있지 않은 상태: follow
+            Follow.objects.create(follower=request.user, following=user_following)
+            message = 'Followed Successfully'
+
+        return Response({'messages': message}, status=status.HTTP_200_OK)
+
+
+
+
+
+
+

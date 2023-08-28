@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from accounts.models import User
+from accounts.models import User, Follow
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -16,3 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = '__all__'

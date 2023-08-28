@@ -70,3 +70,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 #         managed = False
 #         db_table = 'userinfo'
 #         db_table_comment = '사용자 정보'
+
+
+class Follow(models.Model):
+    id = models.AutoField(primary_key=True)
+    follower = models.ForeignKey(User, related_name='follower', on_delete=models.CASCADE)
+    following = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'follow'
