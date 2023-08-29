@@ -166,7 +166,6 @@ class FollowAPIView(APIView):
 
 class UserinfoAPIView(APIView):
     # API 02-01 회원 정보 입력
-    # BMI 계산 추가
     @login_check
     def post(self, request):
         # User의 userinfo가 존재하는 지 확인
@@ -188,3 +187,22 @@ class UserinfoAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class UserDetailAPIView(APIView):
+    # user_id -> 해당 유저의 상세 정보 조회
+    def get_object(self, pk):
+        return get_object_or_404(User, pk=pk)
+
+    # API 02-02 회원 정보 조회
+    def get(self, request, pk):
+        userinfo = Userinfo.objects.get(user_id=pk)
+
+        # 계정 비공개 일 경우
+        if userinfo.acc_visibility == 0:
+            return Response({'message': 'This account is Private account'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = UserinfoSerializer(userinfo)
+        return Response(serializer.data, status=status.HTTP_200_OK)
