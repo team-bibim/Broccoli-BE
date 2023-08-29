@@ -1,16 +1,13 @@
 import jwt
 from django.contrib.auth import authenticate
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
-from accounts.models import User, Follow
-from accounts.serializers import UserSerializer, FollowSerializer
+from accounts.models import User, Follow, Userinfo
+from accounts.serializers import UserSerializer, FollowSerializer, UserinfoSerializer
 from accounts.utils import login_check
 from my_settings import SECRET_KEY
 
@@ -56,19 +53,34 @@ class AuthAPIView(APIView):
             serializer = UserSerializer(instance=user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         # token이 만료되었을 때
-        except(jwt.ExpiredSignatureError):
-            data = {'refresh': request.COOKIES('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
+        # except(jwt.exceptions.ExpiredSignatureError):
+        #     data = {'refresh': request.COOKIES.get('refresh', None)}
+        #     serializer = TokenRefreshSerializer(data=data)
+        #     if serializer.is_valid(raise_exception=True):
+        #         access = serializer.data.get('access', None)
+        #         refresh = serializer.data.get('refresh', None)
+        #         payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+        #         pk = payload.get('user_id')
+        #         user = get_object_or_404(User, pk=pk)
+        #         serializer = UserSerializer(instance=user)
+        #         res = Response(serializer.data, status=status.HTTP_200_OK)
+        #         res.set_cookie('access', access)
+        #         res.set_cookie('refresh', refresh)
+        #         return res
+        #     raise jwt.exceptions.InvalidTokenError
+        except(jwt.exceptions.ExpiredSignatureError):
+            data = {'refresh': request.COOKIES.get('refresh', None)}
+            serializer = TokenObtainPairSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+                access = serializer.data.get('access_token', None)
+                refresh = serializer.data.get('refresh_token', None)
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserSerializer(instance=user)
                 res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access', access)
-                res.set_cookie('refresh', refresh)
+                res.set_cookie('access_token', access)
+                res.set_cookie('refresh_token', refresh)
                 return res
             raise jwt.exceptions.InvalidTokenError
         # 사용 불가능한 토큰일 때
@@ -131,12 +143,8 @@ class FollowAPIView(APIView):
     # API 08-02, 08-03 팔로우, 언팔로우
     @login_check
     def post(self, request):
-        print(request.user)
         following_id = request.data.get('following_id')
-        print(following_id)
         user_following = get_object_or_404(User, id=following_id)
-
-        print(user_following)
 
         if user_following == request.user:
             return Response({'message': "Can't Follow Self"}, status=status.HTTP_400_BAD_REQUEST)
@@ -156,8 +164,27 @@ class FollowAPIView(APIView):
         return Response({'messages': message}, status=status.HTTP_200_OK)
 
 
+class UserinfoAPIView(APIView):
+    # API 02-01 회원 정보 입력
+    # BMI 계산 추가
+    @login_check
+    def post(self, request):
+        # User의 userinfo가 존재하는 지 확인
+        is_exist = Userinfo.objects.filter(user_id=request.user.id)
+        if is_exist:
+            return Response({'message': 'User already had Userinfo'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # user 설정
+        request.data['user'] = request.user.id
 
+        # bmi 계산
+        weight = request.data.get('weight')
+        height = request.data.get('height') * 0.01
+        bmi = round(weight / (height * height), 2)
+        request.data['bmi'] = bmi
 
-
-
+        serializer = UserinfoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

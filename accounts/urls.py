@@ -1,6 +1,6 @@
 from django.urls import path, include
 
-from accounts.views import SigninAPIView, AuthAPIView, FollowAPIView
+from accounts.views import SigninAPIView, AuthAPIView, FollowAPIView, UserinfoAPIView
 
 urlpatterns = [
     # path('', include('dj_rest_auth.urls')),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('signin/', SigninAPIView.as_view()),
     path('auth/', AuthAPIView.as_view()),
     path('follow/', FollowAPIView.as_view()),
+    path('info/', UserinfoAPIView.as_view()),
 ]

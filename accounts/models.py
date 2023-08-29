@@ -59,17 +59,29 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['nickname']
 
 # class Userinfo(models.Model):
-#     user = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
+#     user = models.ForeignKey(User, related_name='user', on_delete=models.CASCADE, null=False)
 #     height = models.IntegerField(blank=True, null=True)
 #     weight = models.FloatField(blank=True, null=True)
 #     bmi = models.FloatField(blank=True, null=True)
 #     info = models.CharField(max_length=100, blank=True, null=True)
-#     accvisibility = models.IntegerField(db_column='accVisibility', blank=True, null=True)  # Field name made lowercase.
+#     acc_visibility = models.IntegerField(db_column='accVisibility', blank=True, null=True)  # Field name made lowercase.
 #
 #     class Meta:
 #         managed = False
 #         db_table = 'userinfo'
 #         db_table_comment = '사용자 정보'
+
+class Userinfo(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user")
+    height = models.IntegerField(blank=True, null=True)
+    weight = models.FloatField(blank=True, null=True)
+    bmi = models.FloatField(blank=True, null=True)
+    info = models.CharField(max_length=150, blank=True, null=True)
+    acc_visibility = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'userinfo'
 
 
 class Follow(models.Model):

@@ -1,6 +1,7 @@
+import requests
 from rest_framework import serializers
 
-from accounts.models import User, Follow
+from accounts.models import User, Follow, Userinfo
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -20,4 +21,9 @@ class UserSerializer(serializers.ModelSerializer):
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
+        fields = '__all__'
+
+class UserinfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Userinfo
         fields = '__all__'
