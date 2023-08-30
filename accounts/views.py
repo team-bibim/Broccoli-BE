@@ -90,8 +90,6 @@ class AuthAPIView(APIView):
     # 01-02 이메일 로그인
     def post(self, request):
         # user 인증
-        print(request.data)
-
         user = authenticate(
             username=request.data.get("email"), password=request.data.get("password")
         )
@@ -189,6 +187,31 @@ class UserinfoAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+    # API 02-03 회원 정보 수정
+    # PUT vs PATCH
+    # PUT : 모든 속성 수정 / PATCH : 일부 속성 수정
+    @login_check
+    def put(self, request):
+        # User의 userinfo가 존재하는 지 확인
+        is_exist = Userinfo.objects.filter(user_id=request.user.id)
+        if not is_exist:
+            return Response({'message': 'No Userinfo'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.data['user'] = request.user.id
+
+        userinfo = Userinfo.objects.get(user_id=request.user.id)
+
+        # bmi 계산
+        weight = request.data.get('weight')
+        height = request.data.get('height') * 0.01
+        bmi = round(weight / (height * height), 2)
+        request.data['bmi'] = bmi
+
+        serializer = UserinfoSerializer(userinfo, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserDetailAPIView(APIView):
