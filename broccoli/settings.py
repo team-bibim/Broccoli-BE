@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'Exer.apps.ExerConfig',
     'usebody.apps.UsebodyConfig',
+    'routine.apps.RoutineConfig',
     'accounts.apps.AccountsConfig',
 ]
 
