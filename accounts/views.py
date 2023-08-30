@@ -53,34 +53,19 @@ class AuthAPIView(APIView):
             serializer = UserSerializer(instance=user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         # token이 만료되었을 때
-        # except(jwt.exceptions.ExpiredSignatureError):
-        #     data = {'refresh': request.COOKIES.get('refresh', None)}
-        #     serializer = TokenRefreshSerializer(data=data)
-        #     if serializer.is_valid(raise_exception=True):
-        #         access = serializer.data.get('access', None)
-        #         refresh = serializer.data.get('refresh', None)
-        #         payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-        #         pk = payload.get('user_id')
-        #         user = get_object_or_404(User, pk=pk)
-        #         serializer = UserSerializer(instance=user)
-        #         res = Response(serializer.data, status=status.HTTP_200_OK)
-        #         res.set_cookie('access', access)
-        #         res.set_cookie('refresh', refresh)
-        #         return res
-        #     raise jwt.exceptions.InvalidTokenError
         except(jwt.exceptions.ExpiredSignatureError):
             data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenObtainPairSerializer(data=data)
+            serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access_token', None)
-                refresh = serializer.data.get('refresh_token', None)
+                access = serializer.validated_data.get('access', None)
+                refresh = serializer.validated_data.get('refresh', None)
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserSerializer(instance=user)
                 res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access_token', access)
-                res.set_cookie('refresh_token', refresh)
+                res.set_cookie('access', access)
+                res.set_cookie('refresh', refresh)
                 return res
             raise jwt.exceptions.InvalidTokenError
         # 사용 불가능한 토큰일 때
@@ -212,6 +197,13 @@ class UserinfoAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # 02-04 내 정보 조회
+    @login_check
+    def get(self, request):
+        userinfo = Userinfo.objects.get(user_id=request.user.id)
+        serializer = UserinfoSerializer(userinfo)
+        return Response(serializer.data)
 
 
 class UserDetailAPIView(APIView):
