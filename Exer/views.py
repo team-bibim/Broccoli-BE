@@ -7,16 +7,28 @@ from Exer.serializers import ExerciseSerializer
 from Exer.serializers import ExerciseDetailSerializer
 from django.shortcuts import get_object_or_404
 
+from django.db import connection
 
 #03-01 부위별 운동 간단 조회
-#usebody의 id 대신 name이 나오게 하려면 model을 수정해야 할 것으로 보임
 class ExerciseBodyAPIiew(APIView):
     def get_object(self,pk):
          return Exercise.objects.filter(usebody_id=pk)
 
     def get(self,request,pk):
+        #pk를 usebody_id를 가지는 객체를 가져온다
+        cursor = connection.cursor()
+        sql = "select usebody_name from usebody where usebody_id = %s"
+        cursor.execute(sql, [pk])
+        result = cursor.fetchall()
+
         exercise = self.get_object(pk)
         serializer = ExerciseSerializer(exercise, many=True)
+
+        for i in serializer.data:
+            key = f'usebody_name'
+            value= result[0][0]
+            i[key] = value
+
         return Response(serializer.data)
 
 
@@ -33,12 +45,36 @@ class ExerciseDetailAPIView(APIView):
 #03-03 운동 검색
 class ExerciseSearchAPIView(APIView):
     def post(self,request):
-        data = request.data
+        if request.body:
+            objectsKor = Exercise.objects.filter(exerciseName_English__icontains=request.data.get('searchData'))
+            objectsEng = Exercise.objects.filter(exerciseName_Korean__icontains=request.data.get('searchData'))
 
-        exercise = Exercise.objects.filter(exerciseName_Korean=data)
-        serializer = ExerciseSerializer(exercise)
+            combined_objects = list(objectsKor) + list(objectsEng)
 
-        if serializer.is_valid():
+            body = []
+
+            for i in combined_objects:
+                u_id = i.usebody_id
+
+                cursor = connection.cursor()
+                sql = "select usebody_name from usebody where usebody_id = %s"
+                cursor.execute(sql, [u_id])
+                result = cursor.fetchall()
+                body.append(result[0][0])
+
+            serializer = ExerciseSerializer(combined_objects, many=True)
+
+            index = 0
+            for i in serializer.data:
+
+                key = f'usebody_name'
+                value = body[index]
+                i[key] = value
+                index+=1
+
             return Response(serializer.data)
-        return Response(serializer.errors)
+        else:
+            objects = Exercise.objects.all()
+            serializer = ExerciseSerializer(objects, many=True)
 
+            return Response(serializer.data)

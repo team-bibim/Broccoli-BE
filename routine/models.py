@@ -29,7 +29,7 @@ class RoutineDetail(models.Model):
 
 class RoutineBox(models.Model):
     box_id = models.IntegerField(primary_key=True)
-    user = models.ForeignKey('User.User', on_delete=models.CASCADE, max_length=11)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, max_length=11)
     routine = models.ForeignKey('Routine', on_delete=models.CASCADE, max_length=11)
 
     class Meta:

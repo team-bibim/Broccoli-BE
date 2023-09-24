@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 import my_settings
@@ -28,10 +28,25 @@ SECRET_KEY = my_settings.SECRET_KEY
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+#나중에 보안 상의 문제를 수정하려면 *를 삭제해야 함
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
+
+#user 설정
+AUTH_USER_MODEL = 'accounts.User'
+
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,9 +55,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    #라이브러리
     'rest_framework',
-    'Exer.apps.ExerConfig',
+    'rest_framework_simplejwt',
+
+
+    # 'allauth',
+    # 'allauth.socialaccount',
+    # 'allauth.account',
+    'rest_framework.authtoken',
+    # 'rest_auth.registration',
+
+    #연동
+    'corsheaders',
+    #앱
     'usebody.apps.UsebodyConfig',
+    'Exer.apps.ExerConfig',
     'routine.apps.RoutineConfig',
     'accounts.apps.AccountsConfig',
 ]
@@ -54,8 +83,30 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ORIGIN_WHITELIST= (
+    'http://localhost:8080',
+    'http://192.168.8.139:8080',
+)
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+#JWT 설정
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('JWT',),
+}
 
 ROOT_URLCONF = 'broccoli.urls'
 
