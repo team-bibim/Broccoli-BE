@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from accounts.models import User
-from my_settings import SECRET_KEY
+from broccoli.settings import SECRET_KEY
 
 
 def login_check(func):

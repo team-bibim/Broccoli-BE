@@ -1,21 +1,14 @@
+from datetime import datetime
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+import random
+import string
 
-
-# class User(models.Model):
-#     user_id = models.IntegerField(primary_key=True)
-#     nickname = models.CharField(max_length=10, blank=True, null=True)
-#     password = models.CharField(max_length=20, blank=True, null=True)
-#     email = models.CharField(max_length=100, blank=True, null=True)
-#
-#     # USERNAME_FIELD = 'email'
-#     # REQUIRED_FIELDS = ['username']
-#
-#     class Meta:
-#         managed = False
-#         db_table = 'user'
-#         db_table_comment = '사용자 데이터'
+def generate_random_nickname():
+    rstring = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    return rstring
 
 
 class UserManager(BaseUserManager):
@@ -47,7 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     email = models.EmailField(max_length=100, blank=False, null=False, unique=True)
-    nickname = models.CharField(max_length=20, blank=False, null=False, unique=True)
+    nickname = models.CharField(max_length=20, blank=False, null=False, unique=True, default=generate_random_nickname)
 
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)

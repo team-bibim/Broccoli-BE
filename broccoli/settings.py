@@ -9,10 +9,11 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
+import os.path
 from datetime import timedelta
 from pathlib import Path
 
-import my_settings
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
+# 환경 변수를 불러올 수 있는 상태로 세팅
+env = environ.Env(DEBUG=(bool, True))
+
+# 환경 변수 파일 불러오기
+environ.Env.read_env(
+    env_file=os.path.join(BASE_DIR, '.env')
+)
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECRET_KEY = 'django-insecure-aw0efor5oq-m%uds_t*sz81#8-gxbf6u+2@z^=mt@v_vjg)!1#'
-SECRET_KEY = my_settings.SECRET_KEY
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = []
 
@@ -39,6 +45,7 @@ AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 PASSWORD_HASHERS = [
@@ -54,17 +61,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
 
     #라이브러리
     'rest_framework',
     'rest_framework_simplejwt',
-
-
-    # 'allauth',
-    # 'allauth.socialaccount',
-    # 'allauth.account',
     'rest_framework.authtoken',
-    # 'rest_auth.registration',
+
+    # 'dj_rest_auth',
+    # 'dj_rest_auth.registration',
+
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+
+    # provider
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.kakao',
+
 
     #앱
     'usebody.apps.UsebodyConfig',
@@ -86,6 +100,15 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
+SITE_ID = 1
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+REST_USE_JWT = True
 
 #JWT 설정
 SIMPLE_JWT = {
@@ -127,8 +150,25 @@ WSGI_APPLICATION = 'broccoli.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-DATABASES = my_settings.DATABASES
+#database 설정
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('DATABASE_NAME'),
+        'USER': env('DATABASE_USER'),
+        'PASSWORD': env('DATABASE_PASSWORD'),
+        'HOST': env('DATABASE_HOST'),
+        'PORT': env('DATABASE_PORT'),
+    }
+}
 
+SECRET_KEY = 'django-insecure-aw0efor5oq-m%uds_t*sz81#8-gxbf6u+2@z^=mt@v_vjg)!1#'
+SOCIAL_AUTH_GOOGLE_CLIENT_ID = "249718071570-8rce5us18ka9b8si38uh359e9i2a3noa.apps.googleusercontent.com"
+SOCIAL_AUTH_GOOGLE_SECRET = "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"
+STATE = "asdfasdf"
+
+SOCIAL_AUTH_KAKAO_CLIENT_ID = "1e367ba1ac7e10e6889098a92fdd3fa7"
+SOCIAL_AUTH_KAKAO_SECRET = "969690"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
