@@ -35,7 +35,7 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
 #나중에 보안 상의 문제를 수정하려면 *를 삭제해야 함
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['127.0.0.1']
 
 
 # Application definition
@@ -156,12 +156,6 @@ WSGI_APPLICATION = 'broccoli.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 #database 설정
 DATABASES = {
     'default': {
@@ -173,14 +167,6 @@ DATABASES = {
         'PORT': env('DATABASE_PORT'),
     }
 }
-
-SECRET_KEY = 'django-insecure-aw0efor5oq-m%uds_t*sz81#8-gxbf6u+2@z^=mt@v_vjg)!1#'
-SOCIAL_AUTH_GOOGLE_CLIENT_ID = "249718071570-8rce5us18ka9b8si38uh359e9i2a3noa.apps.googleusercontent.com"
-SOCIAL_AUTH_GOOGLE_SECRET = "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"
-STATE = "asdfasdf"
-
-SOCIAL_AUTH_KAKAO_CLIENT_ID = "1e367ba1ac7e10e6889098a92fdd3fa7"
-SOCIAL_AUTH_KAKAO_SECRET = "969690"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
