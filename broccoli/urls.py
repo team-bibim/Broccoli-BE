@@ -23,4 +23,5 @@ urlpatterns = [
     path('usebody/', include('usebody.urls')),
     path('routine/', include('routine.urls')),
     path('accounts/', include('accounts.urls')),
+    path('accounts/', include('allauth.urls')),
 ]

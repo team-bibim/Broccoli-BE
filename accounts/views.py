@@ -1,6 +1,17 @@
+import os
+
 import jwt
+import requests
+from allauth.socialaccount.models import SocialAccount
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.kakao.views import KakaoOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from dj_rest_auth.registration.views import SocialLoginView
 from django.contrib.auth import authenticate
-from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from json import JSONDecodeError
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +20,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from accounts.models import User, Follow, Userinfo
 from accounts.serializers import UserSerializer, FollowSerializer, UserinfoSerializer
 from accounts.utils import login_check
-from my_settings import SECRET_KEY
+from broccoli.settings import SECRET_KEY
 
 
 # 01-01 이메일 회원가입
@@ -41,6 +52,11 @@ class SigninAPIView(APIView):
             return res
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @login_check
+    def delete(self, request):
+        request.user.delete()
+        return Response({'message': 'Delete Account Successfully'}, status=status.HTTP_200_OK)
+
 
 class AuthAPIView(APIView):
     # 01 token에 따른 user 정보 가져오기
@@ -53,39 +69,26 @@ class AuthAPIView(APIView):
             serializer = UserSerializer(instance=user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         # token이 만료되었을 때
-        # except(jwt.exceptions.ExpiredSignatureError):
-        #     data = {'refresh': request.COOKIES.get('refresh', None)}
-        #     serializer = TokenRefreshSerializer(data=data)
-        #     if serializer.is_valid(raise_exception=True):
-        #         access = serializer.data.get('access', None)
-        #         refresh = serializer.data.get('refresh', None)
-        #         payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-        #         pk = payload.get('user_id')
-        #         user = get_object_or_404(User, pk=pk)
-        #         serializer = UserSerializer(instance=user)
-        #         res = Response(serializer.data, status=status.HTTP_200_OK)
-        #         res.set_cookie('access', access)
-        #         res.set_cookie('refresh', refresh)
-        #         return res
-        #     raise jwt.exceptions.InvalidTokenError
         except(jwt.exceptions.ExpiredSignatureError):
             data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenObtainPairSerializer(data=data)
+            serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access_token', None)
-                refresh = serializer.data.get('refresh_token', None)
+                access = serializer.validated_data.get('access', None)
+                refresh = serializer.validated_data.get('refresh', None)
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserSerializer(instance=user)
                 res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access_token', access)
-                res.set_cookie('refresh_token', refresh)
+                res.set_cookie('access', access)
+                res.set_cookie('refresh', refresh)
                 return res
             raise jwt.exceptions.InvalidTokenError
         # 사용 불가능한 토큰일 때
         except(jwt.exceptions.InvalidTokenError):
             return Response(status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"message": "No Such User"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 01-02 이메일 로그인
     def post(self, request):
@@ -186,7 +189,6 @@ class UserinfoAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     # API 02-03 회원 정보 수정
     # PUT vs PATCH
     # PUT : 모든 속성 수정 / PATCH : 일부 속성 수정
@@ -213,6 +215,13 @@ class UserinfoAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # 02-04 내 정보 조회
+    @login_check
+    def get(self, request):
+        userinfo = Userinfo.objects.get(user_id=request.user.id)
+        serializer = UserinfoSerializer(userinfo)
+        return Response(serializer.data)
+
 
 class UserDetailAPIView(APIView):
     # user_id -> 해당 유저의 상세 정보 조회
@@ -229,3 +238,189 @@ class UserDetailAPIView(APIView):
 
         serializer = UserinfoSerializer(userinfo)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# 소셜 로그인
+BASE_URL = 'http://localhost:8000/'
+GOOGLE_CALLBACK_URL = BASE_URL + 'accounts/google/callback/'
+state = os.environ.get('STATE')
+
+
+# API 01-04 구글 로그인
+def google_login(request):
+    scope = "https://www.googleapis.com/auth/userinfo.email"
+    client_id = os.environ.get('SOCIAL_AUTH_GOOGLE_CLIENT_ID')
+    return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&response_type=code&redirect_uri={GOOGLE_CALLBACK_URL}&scope={scope}")
+
+
+def google_callback(request):
+    client_id = os.environ.get('SOCIAL_AUTH_GOOGLE_CLIENT_ID')
+    client_secret = os.environ.get('SOCIAL_AUTH_GOOGLE_SECRET')
+    code = request.GET.get('code')
+
+    # 받은 코드로 구글에 access token 요청
+    token_req = requests.post(f"https://oauth2.googleapis.com/token?client_id={client_id}&client_secret={client_secret}&code={code}&grant_type=authorization_code&redirect_uri={GOOGLE_CALLBACK_URL}&state={state}")
+
+    # json으로 변환 & 에러 부분 파싱
+    token_req_json = token_req.json()
+    error = token_req_json.get("error")
+
+    # error 발생 시 종료
+    if error is not None:
+        raise JSONDecodeError(error)
+
+    # 성공 시 access token 가져오기
+    access_token = token_req_json.get('access_token')
+
+    # access token으로 email을 구글에 요청
+    email_req = requests.get(f"https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={access_token}")
+    email_req_status = email_req.status_code
+
+    # error 발생 시 400 에러
+    if email_req_status != 200:
+        return JsonResponse({'message': 'Failed to get email'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 성공 시 email 가져오기
+    email_req_json = email_req.json()
+    email = email_req_json.get('email')
+
+
+    # email, access token, code로 회원가입/로그인
+    try:
+        # 전달 받은 email로 등록된 유저가 있는지 탐색
+        user = User.objects.get(email=email)
+
+        # FK로 연결 되어 있는 socialaccount 테이블에서 해당 이메일의 유저가 있는지 확인
+        # socialaccount table -> allauth 제공
+        social_user = SocialAccount.objects.get(user=user)
+
+        # 다른 SNS로 가입
+        if social_user is None:
+            return JsonResponse({'message': 'Email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 존재하지만 구글 계정이 아닌 경우, error
+        if social_user.provider != 'google':
+            return JsonResponse({'message': 'No matching social type'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 이미 구글로 가입되어 있는 경우 -> 로그인 & 해당 유저의 jwt 발급
+        data = {'access_token': access_token, 'code': code}
+        accept = requests.post(f"{BASE_URL}accounts/google/login/finish/", data=data)
+        accept_status = accept.status_code
+
+        # 중간에 문제가 발생하면 error
+        if accept_status != 200:
+            return JsonResponse({"message": "Failed to Signin"}, status=accept_status)
+
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+        return JsonResponse(accept_json)
+
+    except User.DoesNotExist:
+        # 가입이 되어있지 않은 상태 -> 회원가입 & 유저의 jwt 발급
+        data = {'access_token': access_token, 'code': code}
+        accept = requests.post(f"{BASE_URL}accounts/google/login/finish/", data=data)
+        accept_status = accept.status_code
+
+        # 중간에 문제가 발생하면 error
+        if accept_status != 200:
+            return JsonResponse({"message": "Failed to Signin"}, status=accept_status)
+
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+        return JsonResponse(accept_json)
+
+    except SocialAccount.DoesNotExist:
+        # 일반 회원으로 가입된 email일 경우
+        return JsonResponse({'message': 'Email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = GOOGLE_CALLBACK_URL
+    client_class = OAuth2Client
+
+
+# API 01-05 카카오 로그인
+KAKAO_CALLBACK_URI = BASE_URL + 'accounts/kakao/callback/'
+
+def kakao_login(request):
+    client_id = os.environ.get('SOCIAL_AUTH_KAKAO_CLIENT_ID')
+    return redirect(f"https://kauth.kakao.com/oauth/authorize?client_id={client_id}&redirect_uri={KAKAO_CALLBACK_URI}&response_type=code&scope=account_email")
+
+def kakao_callback(request):
+    client_id = os.environ.get('SOCIAL_AUTH_KAKAO_CLIENT_ID')
+    code = request.GET.get("code")
+    redirect_uri = KAKAO_CALLBACK_URI
+
+    # access token을 받는다
+    token_req = requests.get(f"https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id={client_id}&redirect_uri={redirect_uri}&code={code}")
+    token_req_json = token_req.json()
+    error = token_req_json.get("error")
+
+    if error is not None:
+        raise JSONDecodeError(error)
+
+    access_token = token_req_json.get("access_token")
+
+    # email 정보 불러오기
+    profile_request = requests.get("https://kapi.kakao.com/v2/user/me", headers={"Authorization": f"Bearer {access_token}"})
+    profile_json = profile_request.json()
+    kakao_account = profile_json.get('kakao_account')
+    email = kakao_account.get('email', None)
+    print(email)
+
+    try:
+        # 전달 받은 email로 등록된 유저가 있는지 탐색
+        user = User.objects.get(email=email)
+
+        # FK로 연결 되어 있는 socialaccount 테이블에서 해당 이메일의 유저가 있는지 확인
+        # socialaccount table -> allauth 제공
+        social_user = SocialAccount.objects.get(user=user)
+
+        if social_user is None:
+            return JsonResponse({'message': 'email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = {'access_token': access_token, 'code': code}
+        accept = requests.post(f"{BASE_URL}/accounts/kakao/login/finish/", data=data)
+        accept_status = accept.status_code
+
+        # error 발생
+        if accept_status != 200:
+            return JsonResponse({'message': 'Failed to login'}, status=status.HTTP_400_BAD_REQUEST)
+
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+
+        return JsonResponse(accept_json)
+
+    except User.DoesNotExist:
+        data = {'access_token': access_token, "code": code}
+        accept = requests.post(f"{BASE_URL}/accounts/kakao/login/finish/", data=data)
+        accept_status = accept.status_code
+
+        if accept_status != 200:
+            return JsonResponse({"message": "Failed to login", "code": accept_status}, status=status.HTTP_400_BAD_REQUEST)
+
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+        return JsonResponse(accept_json)
+
+
+    except SocialAccount.DoesNotExist:
+        # 일반 회원으로 가입된 email일 경우
+        return JsonResponse({'message': 'Email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class KakaoLogin(SocialLoginView):
+    adapter_class = KakaoOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = KAKAO_CALLBACK_URI
+
+
+
+# kakao 로그인 문제 발생
+# 구글 로그인 할 때, nickname이 ''으로 자동 저장 -> 카카오도 마찬가지
+# nickname unique=True 설정 때문에 중복 데이터 삽입 으로 인한 오류
+# 소셜 로그인을 할 때, 임의의 nickname 값을 넣어 주어야 함
+# 이걸 어떻게 해야 하는가...?
+# -> user model nickname default 값을 random string으로 설정
