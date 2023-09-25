@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'usebody',
-                'db_table_comment': '부위 데이터',
                 'managed': False,
             },
         ),

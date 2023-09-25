@@ -8,4 +8,3 @@ class Usebody(models.Model):
     class Meta:
         managed = False
         db_table = 'usebody'
-        db_table_comment = '부위 데이터'

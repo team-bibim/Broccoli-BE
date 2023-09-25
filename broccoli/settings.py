@@ -34,7 +34,8 @@ environ.Env.read_env(
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+#나중에 보안 상의 문제를 수정하려면 *를 삭제해야 함
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -80,8 +81,12 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.kakao',
 
 
+    #연동
+    'corsheaders',
     #앱
     'usebody.apps.UsebodyConfig',
+    'Exer.apps.ExerConfig',
+    'routine.apps.RoutineConfig',
     'accounts.apps.AccountsConfig',
 ]
 
@@ -92,8 +97,15 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ORIGIN_WHITELIST= (
+    'http://localhost:8080',
+    'http://192.168.8.139:8080',
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
