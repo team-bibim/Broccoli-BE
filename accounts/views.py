@@ -218,9 +218,13 @@ class UserinfoAPIView(APIView):
     # 02-04 내 정보 조회
     @login_check
     def get(self, request):
-        userinfo = Userinfo.objects.get(user_id=request.user.id)
-        serializer = UserinfoSerializer(userinfo)
-        return Response(serializer.data)
+        try:
+            userinfo = Userinfo.objects.get(user_id=request.user.id)
+            serializer = UserinfoSerializer(userinfo)
+            return Response(serializer.data)
+        except Userinfo.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserDetailAPIView(APIView):
