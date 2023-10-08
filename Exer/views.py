@@ -83,13 +83,20 @@ class ExerciseSearchAPIView(APIView):
 
             index = 0
             for i in serializer.data:
-
                 key = f'usebody_name'
                 value = body[index]
                 i[key] = value
                 index+=1
 
-            return Response(serializer.data)
+            filtered_data = [item for item in serializer.data if item['usebody_name']== request.data.get('usebodyName')]
+
+            if not filtered_data:
+                blank= {
+                    "message": "검색 결과가 없습니다"
+                }
+                return Response(blank)
+            else:
+                return Response(filtered_data)
         else:
             objects = Exercise.objects.all()
             serializer = ExerciseDetailSerializer(objects, many=True)
