@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from operator import attrgetter
 
 from accounts.utils import login_check
 # Create your views here.
@@ -11,6 +12,7 @@ from routine.models import RoutineDetail
 from routine.models import RoutineBox
 from usebody.models import Usebody
 from accounts.models import Follow
+from accounts.models import User
 
 from routine.serializers import RoutineSerializer
 from routine.serializers import RoutinecheckSerializer
@@ -36,10 +38,10 @@ class RoutineCreateAPIView(APIView):
              'routine_comment' : request.data.get('routine_comment'),
             #임시
              'recommend_count' : request.data.get('recommend_count'),
-
              'routine_day' : request.data.get('routine_day'),
-             'owner_id' : request.data.get('owner_id'),
+             'nickname' : request.data.get('nickname'),
         }
+
         serializer = RoutineSerializer(data=routine_data)
 
         if serializer.is_valid():
@@ -87,11 +89,10 @@ class RoutineBoxDeleteAPIView(APIView):
 
 
         queryset = RoutineBox.objects.filter(user=f1, routine=f2)
-        temp = queryset
 
         deleted_data = {
             'message': '삭제 완료',
-            'deleted_data': temp
+            'deleted_routine' : str(list(queryset)[0].routine_id)
         }
 
         not_deleted= {
@@ -123,12 +124,16 @@ class RoutinePutAPIView(APIView):
 
         serializer = RoutineModifySerializer(routine, data=request.data)
 
+
         fail = {
             "message": "수정 권한이 없습니다."
         }
 
         if serializer.is_valid():
-            if request.user.id != routine.owner_id:
+            routine_user = routine.nickname
+            user_nickname = routine_user.nickname
+
+            if request.user.nickname != user_nickname:
                 return Response(fail, status=404)
             else:
                 serializer.save()
@@ -144,7 +149,10 @@ class RoutineDeleteAPIView(APIView):
         routine = get_object_or_404(Routine, pk=pk)
         routineDetail = RoutineDetail.objects.filter(routine_id=pk)
 
-        if request.user.id == routine.owner_id:
+        routine_user = routine.nickname
+        user_nickname = routine_user.nickname
+
+        if request.user.nickname != user_nickname:
             # 루틴 정보 삭제
             routine.delete()
 
@@ -163,7 +171,7 @@ class RoutineDetailCreateAPIView(APIView):
     @login_check
     def post(self, request):
         cursor = connection.cursor()
-        sql = "select owner_id from routine where routine_id = %s"
+        sql = "select nickname from routine where routine_id = %s"
         sql2 = "select usebody_id from exercise where exercise_id= %s"
 
         cursor.execute(sql, [request.data.get('routine')])
@@ -183,23 +191,28 @@ class RoutineDetailCreateAPIView(APIView):
             'day': d,
         }
 
-        if result[0][0] == request.user.id:
-            if not RoutineDetail.objects.filter(exercise= e, routine = r, day = d):
-                serializer = RoutineDetailCreateSerializer(data=routineDetail_data)
+        if not result:
+            noRoutine = {"message": "존재하지 않는 루틴입니다."}
+            return Response(noRoutine, status=404)
 
-                if serializer.is_valid():
-                    serializer.save()
-
-                    return Response(serializer.data, status=201)
-                return Response(serializer.errors)
-            else:
-                over = {"message": "완전히 중복된 일정입니다."}
-                return Response(over, status = 404)
         else:
-            NP= {
-                "message": "생성할 권한이 없습니다."
-            }
-            return Response(NP, status=404)
+            if result[0][0] == request.user.nickname:
+                if not RoutineDetail.objects.filter(exercise= e, routine = r, day = d):
+                    serializer = RoutineDetailCreateSerializer(data=routineDetail_data)
+
+                    if serializer.is_valid():
+                        serializer.save()
+
+                        return Response(serializer.data, status=201)
+                    return Response(serializer.errors)
+                else:
+                    over = {"message": "완전히 중복된 일정입니다."}
+                    return Response(over, status = 404)
+            else:
+                NP= {
+                    "message": "생성할 권한이 없습니다."
+                }
+                return Response(NP, status=404)
 
 #루틴 세부사항 조회 5-9
 class RoutineDetailCheckAPIView(APIView):
@@ -263,10 +276,6 @@ class RoutineDetailCheckAPIView(APIView):
 #             return Response(serializer.data)
 #         return Response(serializer.errors, status=400)
 
-# 처음부터 url에 루틴 id를 넘겨주고
-# 수정 시 해당 루틴에 해당하는 상세사항들만 불러와서
-# day 몇을 어떤 운동으로 수정할거냐? 같은 느낌
-
 #루틴 세부사항 삭제 5-11
 class RoutineDetailDeleteAPIView(APIView):
     @login_check
@@ -278,13 +287,13 @@ class RoutineDetailDeleteAPIView(APIView):
             r_id = i.routine_id
 
             cursor = connection.cursor()
-            sql = "select owner_id from routine where routine_id = %s"
+            sql = "select nickname from routine where routine_id = %s"
             cursor.execute(sql, [r_id])
             result = cursor.fetchall()
 
             o_id = result[0][0]
 
-        if o_id == request.user.id:
+        if o_id == request.user.nickname:
             routine_Detail.delete()
             success = {
                 "message": "삭제 성공"
@@ -308,8 +317,14 @@ class FollowRecommendAPIView(APIView):
         r_objects= []
 
         for i in matching_ids:
-            r_objects += list(Routine.objects.filter(owner_id= i))
+            cursor = connection.cursor()
+            sql = "select nickname from accounts_user where id = %s"
+            cursor.execute(sql, [i])
+            result = cursor.fetchall()
 
+            r_objects += list(Routine.objects.filter(nickname= result[0][0]))
+
+        r_objects = sorted(r_objects, key=attrgetter('created_at'), reverse=True)
         serializer = RoutinecheckSerializer(r_objects, many=True)
 
         return Response(serializer.data)
@@ -325,20 +340,43 @@ class PopularRecommendAPIView(APIView):
         return Response(serializer.data)
 
 #07-01 루틴 검색
-#routine_comment, routine_name, owner_id에 대해 검색
+#routine_comment, routine_name, nickname에 대해 검색
 class RoutineSearchAPIView(APIView):
     def post(self, request):
         if request.body:
-            # routine_name, comment, id 각각 검사 후 반환
+            # routine_name, comment, nickname 각각 검사 후 반환
             objectsName = Routine.objects.filter(routine_name__icontains=request.data.get('searchData'))
             objectsComment = Routine.objects.filter(routine_comment__icontains=request.data.get('searchData'))
-            objectsId = Routine.objects.filter(owner_id__icontains=request.data.get('searchData'))
+            objectsId = Routine.objects.filter(nickname=request.data.get('searchData'))
 
             combined_objects = list(objectsName)+ list(objectsComment) + list(objectsId)
+            combined_objects = sorted(combined_objects, key=attrgetter('created_at'), reverse=True)
 
-            serializer = RoutineSearchSerializer(combined_objects, many=True)
+            if len(combined_objects) == 0:
+                blank = {
+                    "message": "검색 결과가 없습니다."
+                }
+                return Response(blank, status=204)
+            else:
+                serializer = RoutineSearchSerializer(combined_objects, many=True)
 
-            return Response(serializer.data)
+                r1= []
+
+                # for i in combined_objects:
+                #     cursor = connection.cursor()
+                #     sqlR = "select nickname from accounts_user where id = %s"
+                #
+                #     cursor.execute(sqlR, [i.owner_id])
+                #     r1.append((cursor.fetchall())[0][0])
+
+                # temp = 0
+                # for i in serializer.data:
+                #     key1 = f'nickname'
+                #     value1 = r1[temp]
+                #     i[key1] = value1
+                #     temp +=1
+
+                return Response(serializer.data)
         else:
             #검색에 아무것도 안 넣었을 경우 모든 루틴 반환
             objects = Routine.objects.all()

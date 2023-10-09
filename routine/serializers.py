@@ -18,13 +18,13 @@ class RoutineModifySerializer(serializers.ModelSerializer):
 class RoutinecheckSerializer(serializers.ModelSerializer):
     class Meta:
         model= Routine
-        fields = ['routine_id', 'routine_name', 'routine_comment', 'recommend_count', 'routine_day', 'owner_id',
+        fields = ['routine_id', 'routine_name', 'routine_comment', 'recommend_count', 'routine_day', 'nickname',
                   'created_at']
 
 class RoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Routine
-        fields = ['routine_name', 'routine_comment', 'recommend_count','routine_day', 'owner_id']
+        fields = ['routine_name', 'routine_comment', 'recommend_count','routine_day', 'nickname']
 class RoutineDetailSerializer(serializers.ModelSerializer):
     # def create(self, validated_data):
     #     instance = RoutineDetail.objects.create(**validated_data)
@@ -32,7 +32,7 @@ class RoutineDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model= RoutineDetail
-        fields= ['routine', 'day']
+        fields= ['routine_detail_id', 'routine', 'day']
 
         #뒤에 _id 안붙여도 되나?
 
@@ -62,14 +62,13 @@ class RoutineBoxSerializer(serializers.ModelSerializer):
 class RoutinePopRecommendSerializer(serializers.ModelSerializer):
     class Meta:
         model= Routine
-        fields= ['routine_id', 'routine_name', 'routine_comment', 'recommend_count', 'routine_day', 'owner_id']
+        fields= ['routine_id', 'routine_name', 'routine_comment', 'recommend_count', 'routine_day', 'nickname']
 
 
 class RoutineSearchSerializer(serializers.ModelSerializer):
-
     class Meta:
         model= Routine
-        fields=['routine_name', 'routine_comment', 'owner_id']
+        fields=['routine_id','routine_name', 'routine_comment', 'nickname', 'created_at']
 
 
 

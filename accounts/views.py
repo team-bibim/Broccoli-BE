@@ -2,6 +2,7 @@ import os
 
 import jwt
 import requests
+import rest_framework_simplejwt.exceptions
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.kakao.views import KakaoOAuth2Adapter
@@ -15,6 +16,7 @@ from json import JSONDecodeError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
 from accounts.models import User, Follow, Userinfo
@@ -60,6 +62,36 @@ class SigninAPIView(APIView):
 
 class AuthAPIView(APIView):
     # 01 token에 따른 user 정보 가져오기
+    # def get(self, request):
+    #     try:
+    #         access = request.COOKIES.get('access')
+    #         payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+    #         pk = payload.get('user_id')
+    #         user = get_object_or_404(User, pk=pk)
+    #         serializer = UserSerializer(instance=user)
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     # token이 만료되었을 때
+    #     except jwt.exceptions.ExpiredSignatureError:
+    #         data = {'refresh': request.COOKIES.get('refresh', None)}
+    #         serializer = TokenRefreshSerializer(data=data)
+    #         if serializer.is_valid(raise_exception=True):
+    #             access = serializer.validated_data.get('access', None)
+    #             refresh = serializer.validated_data.get('refresh', None)
+    #             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+    #             pk = payload.get('user_id')
+    #             user = get_object_or_404(User, pk=pk)
+    #             serializer = UserSerializer(instance=user)
+    #             res = Response(serializer.data, status=status.HTTP_200_OK)
+    #             res.set_cookie('access', access)
+    #             res.set_cookie('refresh', refresh)
+    #             return res
+    #         raise jwt.exceptions.InvalidTokenError
+    #     # 사용 불가능한 토큰일 때
+    #     except jwt.exceptions.InvalidTokenError:
+    #         return Response(status=status.HTTP_400_BAD_REQUEST)
+    #     except User.DoesNotExist:
+    #         return Response({"message": "No Such User"}, status=status.HTTP_400_BAD_REQUEST)
+
     def get(self, request):
         try:
             access = request.COOKIES.get('access')
@@ -67,25 +99,43 @@ class AuthAPIView(APIView):
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
             serializer = UserSerializer(instance=user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        # token이 만료되었을 때
-        except(jwt.exceptions.ExpiredSignatureError):
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.validated_data.get('access', None)
-                refresh = serializer.validated_data.get('refresh', None)
-                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-                pk = payload.get('user_id')
-                user = get_object_or_404(User, pk=pk)
-                serializer = UserSerializer(instance=user)
-                res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access', access)
-                res.set_cookie('refresh', refresh)
-                return res
+            res = Response(serializer.data, status=status.HTTP_200_OK)
+            # res = Response(
+            #     {
+            #         "user": serializer.data,
+            #         "message": "Token is vaild",
+            #         "token": {
+            #             "access": access,
+            #             "refresh": request.COOKIES.get('refresh'),
+            #         },
+            #     },
+            #     status=status.HTTP_200_OK
+            # )
+            res.set_cookie('access', access)
+            res.set_cookie('refresh', request.COOKIES.get('refresh'))
+            return res
+        # access token이 만료되었을 때
+        except jwt.exceptions.ExpiredSignatureError:
+            try:
+                data = {'refresh': request.COOKIES.get('refresh', None)}
+                serializer = TokenRefreshSerializer(data=data)
+                if serializer.is_valid(raise_exception=True):
+                    access = serializer.validated_data.get('access', None)
+                    refresh = serializer.validated_data.get('refresh', None)
+                    payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                    pk = payload.get('user_id')
+                    user = get_object_or_404(User, pk=pk)
+                    serializer = UserSerializer(instance=user)
+                    res = Response(serializer.data, status=status.HTTP_200_OK)
+                    res.set_cookie('access', access)
+                    res.set_cookie('refresh', refresh)
+                    return res
+            except rest_framework_simplejwt.exceptions.TokenError:
+                return Response({"message": "로그인이 만료되었습니다."}, status=status.HTTP_200_OK)
+
             raise jwt.exceptions.InvalidTokenError
         # 사용 불가능한 토큰일 때
-        except(jwt.exceptions.InvalidTokenError):
+        except jwt.exceptions.InvalidTokenError:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:
             return Response({"message": "No Such User"}, status=status.HTTP_400_BAD_REQUEST)
@@ -218,9 +268,13 @@ class UserinfoAPIView(APIView):
     # 02-04 내 정보 조회
     @login_check
     def get(self, request):
-        userinfo = Userinfo.objects.get(user_id=request.user.id)
-        serializer = UserinfoSerializer(userinfo)
-        return Response(serializer.data)
+        try:
+            userinfo = Userinfo.objects.get(user_id=request.user.id)
+            serializer = UserinfoSerializer(userinfo)
+            return Response(serializer.data)
+        except Userinfo.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserDetailAPIView(APIView):

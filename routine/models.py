@@ -8,13 +8,12 @@ class Routine(models.Model):
     routine_comment = models.CharField(max_length=50, blank=True, null=True, default=None)
     recommend_count = models.IntegerField(blank=True, null=True, default=0)
     routine_day = models.IntegerField(blank=True, null=True, default=0)
-    owner_id = models.IntegerField(blank=True, null=True, default=0)
+    nickname = models.ForeignKey('accounts.User', on_delete=models.CASCADE, to_field='nickname', db_column= 'nickname')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
         db_table = 'routine'
-
 
 class RoutineDetail(models.Model):
     routine_detail_id = models.IntegerField(primary_key=True)
