@@ -62,43 +62,80 @@ class ExerciseDetailAPIView(APIView):
 #03-03 운동 검색
 class ExerciseSearchAPIView(APIView):
     def post(self,request):
-        if request.body:
-            objectsKor = Exercise.objects.filter(exerciseName_English__icontains=request.data.get('searchData'))
-            objectsEng = Exercise.objects.filter(exerciseName_Korean__icontains=request.data.get('searchData'))
-            objectsEquip = Exercise.objects.filter(equipment_name__icontains=request.data.get('searchData'))
-            combined_objects = list(objectsKor) + list(objectsEng) + list(objectsEquip)
+        body = []
 
-            body = []
-
-            for i in combined_objects:
-                u_id = i.usebody_id
-
-                cursor = connection.cursor()
-                sql = "select usebody_name from usebody where usebody_id = %s"
-                cursor.execute(sql, [u_id])
-                result = cursor.fetchall()
-                body.append(result[0][0])
-
-            serializer = ExerciseDetailSerializer(combined_objects, many=True)
-
-            index = 0
-            for i in serializer.data:
-                key = f'usebody_name'
-                value = body[index]
-                i[key] = value
-                index+=1
-
-            filtered_data = [item for item in serializer.data if item['usebody_name']== request.data.get('usebodyName')]
-
-            if not filtered_data:
-                blank= {
-                    "message": "검색 결과가 없습니다"
-                }
-                return Response(blank)
-            else:
-                return Response(filtered_data)
-        else:
+        if not request.data.get('searchData') and not request.data.get('usebodyName'):
             objects = Exercise.objects.all()
             serializer = ExerciseDetailSerializer(objects, many=True)
 
             return Response(serializer.data)
+
+        else:
+            objectsKor = Exercise.objects.filter(exerciseName_English__icontains=request.data.get('searchData'))
+            objectsEng = Exercise.objects.filter(exerciseName_Korean__icontains=request.data.get('searchData'))
+            objectsEquip = Exercise.objects.filter(equipment_name__icontains=request.data.get('searchData'))
+            combined_objects = list(objectsKor) + list(objectsEng) + list(objectsEquip)
+            serializer = ExerciseDetailSerializer(combined_objects, many=True)
+            print(serializer.data)
+
+            if not request.data.get('usebodyName'):
+                #searchdata만 고려해서 가져와
+
+                if not serializer.data:
+                    blank = {
+                        "message": "검색 결과가 없습니다"
+                    }
+                    return Response(blank)
+                else:
+                    return Response(serializer.data)
+
+            if not request.data.get('searchData'):
+                #해당 부위와 일치하는 데이터만 가져와
+
+                temp = Usebody.objects.filter(usebody_name = request.data.get('usebodyName'))
+
+                #id 알아내기
+                for i in temp:
+                    bodyId = i.usebody_id
+
+                body_filter = Exercise.objects.filter(usebody_id = bodyId)
+                serializer = ExerciseDetailSerializer(body_filter, many=True)
+
+                filtered_data = [item for item in serializer.data]
+
+
+                if not filtered_data:
+                    blank = {
+                        "message": "검색 결과가 없습니다"
+                    }
+                    return Response(blank)
+                else:
+                    return Response(filtered_data)
+            else:
+                for i in combined_objects:
+                    u_id = i.usebody_id
+
+                    cursor = connection.cursor()
+                    sql = "select usebody_name from usebody where usebody_id = %s"
+                    cursor.execute(sql, [u_id])
+                    result = cursor.fetchall()
+                    body.append(result[0][0])
+
+
+                index = 0
+                for i in serializer.data:
+                    key = f'usebody_name'
+                    value = body[index]
+                    i[key] = value
+                    index += 1
+
+                filtered_data = [item for item in serializer.data if
+                                 item['usebody_name'] == request.data.get('usebodyName')]
+
+                if not filtered_data:
+                    blank = {
+                        "message": "검색 결과가 없습니다"
+                    }
+                    return Response(blank)
+                else:
+                    return Response(filtered_data)
