@@ -23,7 +23,14 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = '__all__'
 
+
 class UserinfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Userinfo
         fields = '__all__'
+
+
+class UserDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['nickname', 'email']
