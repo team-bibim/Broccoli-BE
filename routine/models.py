@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 
 class Routine(models.Model):
-    routine_id = models.IntegerField(primary_key=True)
+    routine_id = models.AutoField(primary_key=True)
     routine_name = models.CharField(max_length=10, blank=True, null=True, default=None)
     routine_comment = models.CharField(max_length=50, blank=True, null=True, default=None)
     recommend_count = models.IntegerField(blank=True, null=True, default=0)

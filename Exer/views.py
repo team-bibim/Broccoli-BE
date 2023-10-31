@@ -76,7 +76,6 @@ class ExerciseSearchAPIView(APIView):
             objectsEquip = Exercise.objects.filter(equipment_name__icontains=request.data.get('searchData'))
             combined_objects = list(objectsKor) + list(objectsEng) + list(objectsEquip)
             serializer = ExerciseDetailSerializer(combined_objects, many=True)
-            print(serializer.data)
 
             if not request.data.get('usebodyName'):
                 #searchdata만 고려해서 가져와

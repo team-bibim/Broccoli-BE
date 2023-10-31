@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Routine
 from .models import RoutineDetail
 from .models import RoutineBox
-
+from accounts.utils import login_check
 class RoutineModifySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.routine_name = validated_data.get('routine_name', instance.routine_name)
@@ -21,10 +21,20 @@ class RoutinecheckSerializer(serializers.ModelSerializer):
         fields = ['routine_id', 'routine_name', 'routine_comment', 'recommend_count', 'routine_day', 'nickname',
                   'created_at']
 
+
+class RoutineCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model= Routine
+        #exclude = ['routine_id']
+        fields= '__all__'
+    # #@login_check
+    # def create(self, validated_data):
+    #     routine = Routine.objects.create(**validated_data)
+    #     return routine
 class RoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Routine
-        fields = ['routine_name', 'routine_comment', 'recommend_count','routine_day', 'nickname']
+        fields = ['routine_name', 'routine_comment','routine_day', 'nickname']
 class RoutineDetailSerializer(serializers.ModelSerializer):
     # def create(self, validated_data):
     #     instance = RoutineDetail.objects.create(**validated_data)
