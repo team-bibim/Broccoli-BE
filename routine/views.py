@@ -308,32 +308,37 @@ class RoutineDetailCheckAPIView(APIView):
 
 #루틴 세부사항 삭제 5-11
 class RoutineDetailDeleteAPIView(APIView):
-    @login_check
-    def post(self, request):
-        routine_Detail = RoutineDetail.objects.filter(routine_detail_id= request.data.get('deleteData'))
+    def delete(self, request, pk):
+        routine_detail = get_object_or_404(RoutineDetail, pk=pk)
+        routine_detail.delete()
 
-        #어차피 하나만 검색됨
-        for i in routine_Detail:
-            r_id = i.routine_id
+        success = {"message": "삭제 성공"}
+        return Response(success, status = 200)
 
-            cursor = connection.cursor()
-            sql = "select nickname from routine where routine_id = %s"
-            cursor.execute(sql, [r_id])
-            result = cursor.fetchall()
-
-            o_id = result[0][0]
-
-        if o_id == request.user.nickname:
-            routine_Detail.delete()
-            success = {
-                "message": "삭제 성공"
-            }
-            return Response(success, status=204)
-        else:
-            fail = {
-                "message": "삭제 권한 없음"
-            }
-            return Response(fail, status=404)
+        # routine_Detail = RoutineDetail.objects.filter(routine_detail_id= request.data.get('deleteData'))
+        #
+        # #어차피 하나만 검색됨
+        # for i in routine_Detail:
+        #     r_id = i.routine_id
+        #
+        #     cursor = connection.cursor()
+        #     sql = "select nickname from routine where routine_id = %s"
+        #     cursor.execute(sql, [r_id])
+        #     result = cursor.fetchall()
+        #
+        #     o_id = result[0][0]
+        #
+        # if o_id == request.user.nickname:
+        #     routine_Detail.delete()
+        #     success = {
+        #         "message": "삭제 성공"
+        #     }
+        #     return Response(success, status=204)
+        # else:
+        #     fail = {
+        #         "message": "삭제 권한 없음"
+        #     }
+        #     return Response(fail, status=404)
 
 #06-01 루틴 추천(팔로잉 중인 유저)
 class FollowRecommendAPIView(APIView):
@@ -369,6 +374,26 @@ class PopularRecommendAPIView(APIView):
 
         return Response(serializer.data)
     #루틴이 존재하지 않을 때는 404 status 반환
+
+#06-03 루틴 추천(최신순)
+class LatestRecommendAPIView(APIView):
+    def get(self, request):
+        latest = Routine.objects.all().order_by('-created_at')
+
+        serializer = RoutinecheckSerializer(latest, many=True)
+
+        return Response(serializer.data)
+
+#06-04 내가 만든 루틴들 나열
+class MyRoutineCheckAPIView(APIView):
+    @login_check
+    def get(self, request):
+        myRoutine = Routine.objects.filter(pk = request.user.id)
+
+        serializer = RoutinecheckSerializer(myRoutine, many=True)
+
+        return Response(serializer.data)
+
 
 #07-01 루틴 검색
 #routine_comment, routine_name, nickname에 대해 검색
