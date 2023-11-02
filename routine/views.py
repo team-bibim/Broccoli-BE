@@ -384,6 +384,16 @@ class LatestRecommendAPIView(APIView):
 
         return Response(serializer.data)
 
+#06-04 내가 만든 루틴들 나열
+class MyRoutineCheckAPIView(APIView):
+    @login_check
+    def get(self, request):
+        myRoutine = Routine.objects.filter(pk = request.user.id)
+
+        serializer = RoutinecheckSerializer(myRoutine, many=True)
+
+        return Response(serializer.data)
+
 
 #07-01 루틴 검색
 #routine_comment, routine_name, nickname에 대해 검색
