@@ -9,7 +9,7 @@ class BodySerializer(serializers.ModelSerializer):
 class ExerciseDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
-        fields = ['usebody_id','exerciseName_English', 'exerciseName_Korean', 'equipment_name', 'videolink']
+        fields = ['exercise_id', 'usebody_id','exerciseName_English', 'exerciseName_Korean', 'equipment_name', 'videolink']
 
 class ExerciseSerializer(serializers.ModelSerializer):
     #usebody_name = serializers.SerializerMethodField()
