@@ -32,7 +32,8 @@ from django.db import connection
 
 #루틴 생성 5-1
 class RoutineCreateAPIView(APIView):
-    def post(self,request):
+    # @login_check
+    def post(self, request):
         routine_data = {
              'routine_name' : request.data.get('routine_name'),
              'routine_comment' : request.data.get('routine_comment'),
@@ -41,8 +42,9 @@ class RoutineCreateAPIView(APIView):
              'routine_day' : request.data.get('routine_day'),
              'nickname' : request.data.get('nickname'),
         }
-
-        serializer = RoutineSerializer(data=routine_data)
+        request.data['nickname'] = request.user.nickname
+        print(request.data)
+        serializer = RoutineSerializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save()
