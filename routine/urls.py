@@ -20,4 +20,6 @@ urlpatterns = [
     path('recommend/follow/', views.FollowRecommendAPIView.as_view()),
 
     path('search/', views.RoutineSearchAPIView.as_view()),
+    path('like/', views.RecommendCountAPIView.as_view()),
+
 ]
