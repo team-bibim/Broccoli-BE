@@ -237,12 +237,12 @@ class RoutineDetailCreateAPIView(APIView):
                     return Response(serializer.errors)
                 else:
                     over = {"message": "완전히 중복된 일정입니다."}
-                    return Response(over, status = 404)
+                    return Response(over, status = 400)
             else:
                 NP= {
                     "message": "생성할 권한이 없습니다."
                 }
-                return Response(NP, status=404)
+                return Response(NP, status=401)
 
 #루틴 세부사항 조회 5-9
 class RoutineDetailCheckAPIView(APIView):
@@ -418,7 +418,7 @@ class RoutineSearchAPIView(APIView):
                 blank = {
                     "message": "검색 결과가 없습니다."
                 }
-                return Response(blank, status=204)
+                return Response(blank, status=404)
             else:
                 serializer = RoutineSearchSerializer(combined_objects, many=True)
 

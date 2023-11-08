@@ -29,6 +29,11 @@ class ExerciseBodyAPIiew(APIView):
             value= result[0][0]
             i[key] = value
 
+        if not serializer.data:
+            message = {
+                "결과 없음"
+            }
+            return Response(message, status=404)
         return Response(serializer.data)
 
 
@@ -57,6 +62,12 @@ class ExerciseDetailAPIView(APIView):
             value = body[index]
             i[key] = value
             index += 1
+
+        if not serializer.data:
+            message = {
+                "결과 없음"
+            }
+            return Response(message, status=404)
         return Response(serializer.data)
 
 #03-03 운동 검색
@@ -84,7 +95,7 @@ class ExerciseSearchAPIView(APIView):
                     blank = {
                         "message": "검색 결과가 없습니다"
                     }
-                    return Response(blank)
+                    return Response(blank, status=404)
                 else:
                     return Response(serializer.data)
 
@@ -107,7 +118,7 @@ class ExerciseSearchAPIView(APIView):
                     blank = {
                         "message": "검색 결과가 없습니다"
                     }
-                    return Response(blank)
+                    return Response(blank, status=404)
                 else:
                     return Response(filtered_data)
             else:
@@ -135,6 +146,6 @@ class ExerciseSearchAPIView(APIView):
                     blank = {
                         "message": "검색 결과가 없습니다"
                     }
-                    return Response(blank)
+                    return Response(blank, status=404)
                 else:
                     return Response(filtered_data)
