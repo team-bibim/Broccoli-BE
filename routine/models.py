@@ -1,5 +1,8 @@
 from django.db import models
 
+import accounts.models
+
+
 # Create your models here.
 
 class Routine(models.Model):
@@ -8,11 +11,13 @@ class Routine(models.Model):
     routine_comment = models.CharField(max_length=50, blank=True, null=True, default=None)
     recommend_count = models.IntegerField(blank=True, null=True, default=0)
     routine_day = models.IntegerField(blank=True, null=True, default=0)
-    nickname = models.ForeignKey('accounts.User', on_delete=models.CASCADE, to_field='nickname', db_column= 'nickname')
+    nickname = models.ForeignKey('accounts.User', on_delete=models.CASCADE, to_field='nickname', db_column='nickname', null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    recommend_user = models.ManyToManyField(accounts.models.User, related_name='recommend_user')
+
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'routine'
 
 class RoutineDetail(models.Model):
