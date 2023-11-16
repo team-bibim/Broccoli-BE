@@ -43,7 +43,7 @@ class RoutineCreateAPIView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
-        return Response(serializer.errors)
+        return Response(serializer.errors, status=400)
 
         # routine_data = {
         #     'routine_name': request.data.get('routine_name'),
@@ -449,22 +449,24 @@ class RoutineSearchAPIView(APIView):
 class RecommendCountAPIView(APIView):
     @login_check
     def post(self, request):
-        print(request.data)
-        routine_id = request.data.get('routine_id')
-        is_like = Routine.objects.filter(routine_id=routine_id, recommend_user=request.user).exists()
-        routine = Routine.objects.get(routine_id=routine_id)
+        try:
+            routine_id = request.data.get('routine_id')
+            is_like = Routine.objects.filter(routine_id=routine_id, recommend_user=request.user).exists()
+            routine = Routine.objects.get(routine_id=routine_id)
 
-        # 추천을 누른 상태 : recommend count -1
-        if is_like:
-            routine.recommend_count -= 1
-            routine.recommend_user.remove(request.user)
-            routine.save()
-            message = 'Unrecommend Success'
-        # 추천을 누르지 않은 상태 : recommend count +1
-        else:
-            routine.recommend_count += 1
-            routine.recommend_user.add(request.user)
-            routine.save()
-            message = 'Recommend Success'
+            # 추천을 누른 상태 : recommend count -1
+            if is_like:
+                routine.recommend_count -= 1
+                routine.recommend_user.remove(request.user)
+                routine.save()
+                message = 'Unrecommend Success'
+            # 추천을 누르지 않은 상태 : recommend count +1
+            else:
+                routine.recommend_count += 1
+                routine.recommend_user.add(request.user)
+                routine.save()
+                message = 'Recommend Success'
 
-        return Response({"message": message}, status=status.HTTP_200_OK)
+            return Response({"message": message}, status=status.HTTP_200_OK)
+        except Routine.DoesNotExist:
+            return Response({"message": "No such routine"}, status=status.HTTP_404_NOT_FOUND)

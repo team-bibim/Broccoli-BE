@@ -70,17 +70,6 @@ class AuthAPIView(APIView):
             user = get_object_or_404(User, pk=pk)
             serializer = UserSerializer(instance=user)
             res = Response(serializer.data, status=status.HTTP_200_OK)
-            # res = Response(
-            #     {
-            #         "user": serializer.data,
-            #         "message": "Token is vaild",
-            #         "token": {
-            #             "access": access,
-            #             "refresh": request.COOKIES.get('refresh'),
-            #         },
-            #     },
-            #     status=status.HTTP_200_OK
-            # )
             res.set_cookie('access', access)
             res.set_cookie('refresh', request.COOKIES.get('refresh'))
             return res
