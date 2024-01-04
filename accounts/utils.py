@@ -1,7 +1,6 @@
 import jwt
-import json
+from django.shortcuts import redirect
 
-from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
 

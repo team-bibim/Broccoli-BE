@@ -20,7 +20,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
 from accounts.models import User, Follow, Userinfo
-from accounts.serializers import UserSerializer, FollowSerializer, UserinfoSerializer
+from accounts.serializers import UserSerializer, FollowSerializer, UserinfoSerializer, UserDataSerializer
 from accounts.utils import login_check
 from broccoli.settings import SECRET_KEY
 
@@ -62,36 +62,6 @@ class SigninAPIView(APIView):
 
 class AuthAPIView(APIView):
     # 01 token에 따른 user 정보 가져오기
-    # def get(self, request):
-    #     try:
-    #         access = request.COOKIES.get('access')
-    #         payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-    #         pk = payload.get('user_id')
-    #         user = get_object_or_404(User, pk=pk)
-    #         serializer = UserSerializer(instance=user)
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     # token이 만료되었을 때
-    #     except jwt.exceptions.ExpiredSignatureError:
-    #         data = {'refresh': request.COOKIES.get('refresh', None)}
-    #         serializer = TokenRefreshSerializer(data=data)
-    #         if serializer.is_valid(raise_exception=True):
-    #             access = serializer.validated_data.get('access', None)
-    #             refresh = serializer.validated_data.get('refresh', None)
-    #             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-    #             pk = payload.get('user_id')
-    #             user = get_object_or_404(User, pk=pk)
-    #             serializer = UserSerializer(instance=user)
-    #             res = Response(serializer.data, status=status.HTTP_200_OK)
-    #             res.set_cookie('access', access)
-    #             res.set_cookie('refresh', refresh)
-    #             return res
-    #         raise jwt.exceptions.InvalidTokenError
-    #     # 사용 불가능한 토큰일 때
-    #     except jwt.exceptions.InvalidTokenError:
-    #         return Response(status=status.HTTP_400_BAD_REQUEST)
-    #     except User.DoesNotExist:
-    #         return Response({"message": "No Such User"}, status=status.HTTP_400_BAD_REQUEST)
-
     def get(self, request):
         try:
             access = request.COOKIES.get('access')
@@ -100,17 +70,6 @@ class AuthAPIView(APIView):
             user = get_object_or_404(User, pk=pk)
             serializer = UserSerializer(instance=user)
             res = Response(serializer.data, status=status.HTTP_200_OK)
-            # res = Response(
-            #     {
-            #         "user": serializer.data,
-            #         "message": "Token is vaild",
-            #         "token": {
-            #             "access": access,
-            #             "refresh": request.COOKIES.get('refresh'),
-            #         },
-            #     },
-            #     status=status.HTTP_200_OK
-            # )
             res.set_cookie('access', access)
             res.set_cookie('refresh', request.COOKIES.get('refresh'))
             return res
@@ -213,6 +172,17 @@ class FollowAPIView(APIView):
             message = 'Followed Successfully'
 
         return Response({'messages': message}, status=status.HTTP_200_OK)
+
+
+# API user data 조회 (user_id에 따른 nickname, email)
+class UserDataAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(User, pk=pk)
+    def get(self, request, pk):
+        userData = self.get_object(pk=pk)
+        serializer = UserDataSerializer(userData)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 class UserinfoAPIView(APIView):
