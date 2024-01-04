@@ -257,41 +257,41 @@ class RoutineDetailCheckAPIView(APIView):
             }
             return Response(fail , status = 404)
         else:
-            r1, r2, r3 = '', '', ''
+            r1, r2, r3 = [], [], []
 
             for i in routineDetail:
                 cursor = connection.cursor()
                 sqlR = "select routine_name from routine where routine_id = %s"
                 sqlU = "select usebody_name from usebody where usebody_id = %s"
                 sqlE = "select exerciseName_english from exercise where exercise_id = %s"
-                #한글 번역 너무 구려서 영어로 함
 
                 cursor.execute(sqlR, [i.routine_id])
-                r1 = (cursor.fetchall())[0][0]
+                r1.append((cursor.fetchall())[0][0])
 
                 cursor.execute(sqlU, [i.usebody_id])
-                r2 = (cursor.fetchall())[0][0]
+
+                r2.append((cursor.fetchall())[0][0])
 
                 cursor.execute(sqlE, [i.exercise_id])
-                r3 = (cursor.fetchall())[0][0]
+                r3.append((cursor.fetchall())[0][0])
+
 
             serializer = RoutineDetailSerializer(routineDetail, many=True)
+
+            count = 0
 
             for i in serializer.data:
                 key1 = f'routine_name'
                 key2 = f'usebody_name'
                 key3 = f'exercise_name'
 
-                value1 = r1
-                value2 = r2
-                value3 = r3
+                i[key1] = r1[count]
+                i[key2] = r2[count]
+                i[key3] = r3[count]
 
-                i[key1] = value1
-                i[key2] = value2
-                i[key3] = value3
+                count += 1
 
             return Response(serializer.data)
-
 
 #루틴 세부사항 수정 5-10
 # class RoutineDetailPutAPIView(APIView):
